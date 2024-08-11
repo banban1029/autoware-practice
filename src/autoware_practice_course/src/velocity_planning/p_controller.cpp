@@ -19,7 +19,7 @@
 namespace autoware_practice_course
 {
 
-SampleNode::SampleNode() : Node("p_controller")
+PControllerNode::PControllerNode() : Node("p_controller")
 {
   declare_parameter<double>("kp", 0.0);
   declare_parameter<double>("target_velocity", 1.0);
@@ -37,13 +37,15 @@ SampleNode::SampleNode() : Node("p_controller")
   timer_ = rclcpp::create_timer(this, get_clock(), period, [this] { on_timer(); });
 }
 
-void SampleNode::on_timer()
+void PControllerNode::on_timer()
 {
   const auto stamp = now();
 
   AckermannControlCommand command;
   command.stamp = stamp;
 
+  // The AckermannControlCommand can contain both longitudinal acceleration and velocity commands, but the vehicle
+  // interface only accepts longitudinal acceleration.
   double velocity_error = target_velocity_ - current_velocity_;
   command.longitudinal.acceleration = kp_ * velocity_error;
   command.longitudinal.speed = target_velocity_;
@@ -58,7 +60,7 @@ void SampleNode::on_timer()
 int main(int argc, char ** argv)
 {
   rclcpp::init(argc, argv);
-  auto node = std::make_shared<autoware_practice_course::SampleNode>();
+  auto node = std::make_shared<autoware_practice_course::PControllerNode>();
   rclcpp::spin(node);
   rclcpp::shutdown();
   return 0;
