@@ -20,11 +20,9 @@
 namespace autoware_practice_course
 {
 
-<<<<<<< HEAD
-SampleNode::SampleNode() : Node("longitudinal_controller"), kp_(0.0) 
-=======
+
 LongitudinalControllerNode::LongitudinalControllerNode() : Node("longitudinal_controller"), kp_(0.0)
->>>>>>> 561b09929ec439f2d713c2f9408c76411c3b067a
+
 {
   using std::placeholders::_1;
   declare_parameter<double>("kp", kp_);
@@ -33,13 +31,9 @@ LongitudinalControllerNode::LongitudinalControllerNode() : Node("longitudinal_co
   pub_command_ = create_publisher<AckermannControlCommand>("/control/command/control_cmd", rclcpp::QoS(1));
 
   sub_trajectory_ = create_subscription<Trajectory>(
-<<<<<<< HEAD
-    "/planning/scenario_planning/trajectory", rclcpp::QoS(1), std::bind(&SampleNode::update_target_velocity, this, _1));
-    
-=======
     "/planning/scenario_planning/trajectory", rclcpp::QoS(1),
     std::bind(&LongitudinalControllerNode::update_target_velocity, this, _1));
->>>>>>> 561b09929ec439f2d713c2f9408c76411c3b067a
+
   sub_kinematic_state_ = create_subscription<Odometry>(
     "/localization/kinematic_state", rclcpp::QoS(1),
     std::bind(&LongitudinalControllerNode::update_current_state, this, _1));
