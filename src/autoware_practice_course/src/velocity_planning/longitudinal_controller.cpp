@@ -20,15 +20,17 @@
 namespace autoware_practice_course
 {
 
-SampleNode::SampleNode() : Node("longitudinal_controller"), kp_(0.0)
+SampleNode::SampleNode() : Node("longitudinal_controller"), kp_(0.0) 
 {
   using std::placeholders::_1;
   declare_parameter<double>("kp", kp_);
   get_parameter("kp", kp_);
 
   pub_command_ = create_publisher<AckermannControlCommand>("/control/command/control_cmd", rclcpp::QoS(1));
+
   sub_trajectory_ = create_subscription<Trajectory>(
     "/planning/scenario_planning/trajectory", rclcpp::QoS(1), std::bind(&SampleNode::update_target_velocity, this, _1));
+    
   sub_kinematic_state_ = create_subscription<Odometry>(
     "/localization/kinematic_state", rclcpp::QoS(1), std::bind(&SampleNode::update_current_state, this, _1));
 

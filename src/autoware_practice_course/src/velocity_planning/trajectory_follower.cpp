@@ -62,6 +62,8 @@ void SampleNode::update_target_velocity(const Trajectory & msg)
   target_velocity_ = msg.points[closest_point_index_].longitudinal_velocity_mps;
 };
 
+
+// 機能説明 : パラメータファイルからパラメータを読み込む
 double SampleNode::load_parameters(const std::string & param_file, const std::string & param_tag)
 {
   std::ifstream file(param_file);
@@ -70,12 +72,18 @@ double SampleNode::load_parameters(const std::string & param_file, const std::st
     return -1.0;
   }
 
+  // Read the file line by line
   std::string line;
+  
+  //ファイルから一行ずつ読み込む
   while (std::getline(file, line)) {
+    //パラメータタグが見つかったら、その行をパースしてパラメータ値を取得
     if (line.find(param_tag + ":") != std::string::npos) {
       size_t pos = line.find(":");
+      //"param_tag: param_value"の形式でパラメータが記述されているので、":"の位置を基準にパラメータ値を取得
       if (pos != std::string::npos) {
-        double param_value = std::stod(line.substr(pos + 1));
+        // ":" の後にある文字列を double 型に変換する
+        double param_value = std::stod(line.substr(pos + 1)); //pos+1 以降の文字列を取得
         return param_value;
       }
     }
@@ -89,7 +97,7 @@ void SampleNode::update_current_state(const Odometry & msg)
 {
   current_velocity_ = msg.twist.twist.linear.x;
   current_position_ = msg.pose.pose.position;
-  current_orientation_ = msg.pose.pose.orientation;
+  current_orientation_ = msg.pose.pose.orientation; //クォータニオン
 };
 
 void SampleNode::on_timer()
@@ -99,11 +107,11 @@ void SampleNode::on_timer()
   AckermannControlCommand command;
   command.stamp = stamp;
 
-  double velocity_error = target_velocity_ - current_velocity_;
-  command.longitudinal.acceleration = longitudinal_controller(velocity_error);
-  command.longitudinal.speed = target_velocity_;
+  double velocity_error = target_velocity_ - current_velocity_; //速度誤差を計算
+  command.longitudinal.acceleration = longitudinal_controller(velocity_error); //速度誤差を元に加速度を計算、別ノードで実装
+  command.longitudinal.speed = target_velocity_; //目標速度を設定
 
-  command.lateral.steering_tire_angle = lateral_controller();
+  command.lateral.steering_tire_angle = lateral_controller(); //ステアリング角を計算,下の関数で実装
 
   pub_command_->publish(command);
 }
@@ -113,34 +121,37 @@ double SampleNode::longitudinal_controller(double velocity_error)
   return kp_ * velocity_error;
 }
 
+// 機能説明 : 与えられた軌道に対して、最も近い点から見た前方の点を探し、その点を目標点として、目標点に向かうような制御を行う
 double SampleNode::lateral_controller()
 {
-  double min_distance = std::numeric_limits<double>::max();
-  size_t lookahead_point_index = closest_point_index_;
-  min_distance = std::numeric_limits<double>::max();
+  double min_distance = std::numeric_limits<double>::max(); //最小距離を初期化
+  size_t lookahead_point_index = closest_point_index_; //目標点のインデックスを初期化
+  min_distance = std::numeric_limits<double>::max(); //最小距離を初期化
   // Find the lookahead point
+  // 最も近い点から見て、前方にある点を探す
   for (size_t i = closest_point_index_; i < trajectory_.points.size(); ++i) {
     double dx = trajectory_.points[i].pose.position.x - current_position_.x;
     double dy = trajectory_.points[i].pose.position.y - current_position_.y;
     double dz = trajectory_.points[i].pose.position.z - current_position_.z;
-    double distance = std::sqrt(dx * dx + dy * dy + dz * dz);
-    if (distance >= lookahead_distance_ && distance < min_distance) {
+    double distance = std::sqrt(dx * dx + dy * dy + dz * dz); //2点間の距離を計算、
+    if (distance >= lookahead_distance_ && distance < min_distance) { //目標点との距離がlookahead_distance_以上で、最小距離を更新
       min_distance = distance;
       lookahead_point_index = i;
     }
   }
-  if (lookahead_point_index == closest_point_index_) {
-    RCLCPP_WARN(this->get_logger(), "No valid lookahead point found.");
+  if (lookahead_point_index == closest_point_index_) { //目標点が見つからなかった場合
+    RCLCPP_WARN(this->get_logger(), "No valid lookahead point found."); //警告を出力
     return 0.0;
   }
-  double dx = trajectory_.points[lookahead_point_index].pose.position.x - current_position_.x;
-  double dy = trajectory_.points[lookahead_point_index].pose.position.y - current_position_.y;
-  double alpha = std::atan2(dy, dx) - calculate_yaw_from_quaternion(current_orientation_);
-  double steering_angle = std::atan2(2.0 * wheel_base_ * std::sin(alpha), lookahead_distance_);
+  double dx = trajectory_.points[lookahead_point_index].pose.position.x - current_position_.x; //目標点とのx座標の差分
+  double dy = trajectory_.points[lookahead_point_index].pose.position.y - current_position_.y;  
+  double alpha = std::atan2(dy, dx) - calculate_yaw_from_quaternion(current_orientation_); //目標点との角度の差分
+  double steering_angle = std::atan2(2.0 * wheel_base_ * std::sin(alpha), lookahead_distance_); //ステアリング角を計算
   RCLCPP_INFO(this->get_logger(), "Calculated steering angle: %f", steering_angle);
   return steering_angle;
 }
 
+//クォータニオンをオイラー角に
 double SampleNode::calculate_yaw_from_quaternion(const geometry_msgs::msg::Quaternion & q)
 {
   // Convert quaternion to Euler angles

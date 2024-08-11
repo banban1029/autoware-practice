@@ -50,14 +50,18 @@ void SampleNode::load_path(const std::string & file_path)
   std::getline(file, line);
   RCLCPP_INFO(this->get_logger(), "Skipping header: %s", line.c_str());
   while (std::getline(file, line)) {
+    //
     RCLCPP_INFO(this->get_logger(), "Processing line: %s", line.c_str());
     TrajectoryPoint point;
+
+    // stringstream を使用して行をカンマで区切り、各項目を取得する
     std::stringstream ss(line);
     std::string x, y, longitudinal_velocity_mps;
     std::getline(ss, x, ',');
     std::getline(ss, y, ',');
     std::getline(ss, longitudinal_velocity_mps, ',');
 
+    // 取得した項目を TrajectoryPoint に格納する, double に変換する
     point.pose.position.x = std::stod(x);
     point.pose.position.y = std::stod(y);
     point.longitudinal_velocity_mps = std::stod(longitudinal_velocity_mps);
